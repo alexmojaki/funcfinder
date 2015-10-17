@@ -191,6 +191,8 @@ def ask(question, time_answers=True):
             raise AssertionError("Failed to find the number of arguments the answer must have. "
                                  "Did you call the given function?")
 
+    del exc_info
+
     num_args = num_args_holder[0]
     index_permutations = list(permutations(range(num_args)))
 
