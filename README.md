@@ -40,16 +40,18 @@ That is, you describe what the function should do, and it will find one that doe
 * [Motivation](#motivation)
 * [Getting started](#getting-started)
 * [Usage](#usage)
-    * [Searching](#searching)
-    * [Showing questions](#showing-questions)
-        * [The question](#the-question)
-        * [Answers](#answers)
-        * [Dependencies](#dependencies)
-    * [Asking questions](#asking-questions)
+  * [Searching](#searching)
+  * [Showing questions](#showing-questions)
+    * [The question](#the-question)
+    * [Answers](#answers)
+    * [Dependencies](#dependencies)
+  * [Asking questions](#asking-questions)
 * [Contributing](#contributing)
-    * [File structure, organisation rules, and boilerplate](#file-structure-organisation-rules-and-boilerplate)
-    * [Writing questions](#writing-questions)
-    * [Writing answers](#writing-answers)
+  * [Folder structure](#folder-structure)
+  * [Naming](#naming)
+  * [Imports](#imports)
+  * [Writing questions](#writing-questions)
+  * [Writing answers](#writing-answers)
 * [FAQ](#faq)
 
 ## Motivation
@@ -205,7 +207,7 @@ The first thing in the output is the source code of the question. A question is 
 
 #### Answers
 
-Next we see answers to the question that have been marked as solutions. These are immediately tested against the question to make sure they work. Indeed, the second of the two answers failed with an exception! Normally we would see a traceback, but this is a special case: a `TryImportError` just indicates that you're missing some required library to use this answer. Here Python's dynamic nature shines: questions and answers can freely use any third party libraries, and nothing will go wrong if you don't have them installed. They just have to be imported inside the function definitions.
+Next we see answers to the question that have been marked as solutions. These are immediately tested against the question to make sure they work. Indeed, the second of the two answers failed with an exception! Normally we would see a traceback, but this is a special case: a `TryImportError` just indicates that you're missing some required library to use this answer. Questions and answers can freely use any third party libraries and nothing will go wrong if you don't have them installed. They just have to be imported slightly differently.
 
 [sortedcontainers](http://www.grantjenks.com/docs/sortedcontainers/) is a potentially useful library and can easily be installed using `pip`. Suppose we install it. Now the answer passes the tests defined by the question, and we also get something extra:
 
@@ -223,8 +225,7 @@ Passed tests successfully.
 
 /Users/alexhall/Dropbox/python/funcfinder/funcfinder/answers/dict.py : 19
 def sorted_dict(d):
-    from sortedcontainers import SortedDict
-    return SortedDict(d)
+    return sortedcontainers.SortedDict(d)
 
 Passed tests successfully.
 --------------------------
@@ -262,9 +263,9 @@ def how_to_test_if_number_is_even(func):
 funcfinder.ask(how_to_test_if_number_is_even)
 ```
 
-Note that this is NOT a real test. If the tests you write for production code look like that then you can expect your systems to break all the time. But questions on funcfinder don't need to be thorough at all - they just need to contain enough detail to narrow things down. Most answers in the repository won't even expect an integer as input and will fail immediately. A few unwanted answers could potentially survive this test (e.g. check if the number is a power of two), but it's very easy to either take a quick look and see which answer you actually need, or to add a couple more test cases to narrow things down (e.g. `assert func(6)`).
+Note that this is NOT a real test. If the tests you write for production code look like that then you can expect your systems to break all the time. But when you want to ask funcfinder a new question you don't need to be thorough at all - just give enough detail to narrow things down. Most answers in the repository won't even expect an integer as input and will fail immediately. A few unwanted answers could potentially survive this test (e.g. check if the number is a power of two), but it's very easy to either take a quick look and see which answer you actually need, or to add a couple more test cases to narrow things down (e.g. `assert func(6)`).
 
-If answers are found they will usually come with names of questions that they solve, which you can inspect with `funcfinder show` to see more detailed tests.
+If answers are found they will come with names of questions that they solve, which you can inspect with `funcfinder show` to see more detailed tests.
 
 There are just a few simple guidelines to asking questions. Your expected answer must have a simple function signature: no `*args` or `**kwargs`, and no tuple unpacking (i.e. no `def foo(a, (b, c)): ...`). Therefore every call to `func` in the question must have the same number of arguments, none of them named. You're looking for a solution to a specific problem, not a neat API.
 
@@ -276,7 +277,7 @@ There's one last catch when it comes to asking (and searching for) questions. Yo
 
 ## Contributing
 
-For this repo to be useful, it's going to need a large community effort. So the first thing you can do to help is to recruit others. Tell your friends and coworkers. Talk about funcfinder in programming forums. Write a blog post. Anything that will multiply your impact.
+It will take a large community effort to make this repo useful. So the first thing you can do to help is recruit others. Tell your friends and coworkers. Talk about funcfinder in programming forums. Write a blog post. Anything that will multiply your impact.
 
 If you have concerns or suggestions, feel free to open an issue, join the discussion on an existing one, or [come chat on gitter](https://gitter.im/alexmojaki/funcfinder?utm_source=share-link&utm_medium=link&utm_campaign=share-link). All feedback is welcome.
  
@@ -290,11 +291,15 @@ Be aware that any code contributions fall under the MIT License and anyone else 
 
 Writing questions and answers is pretty simple and straightforward, but there are some rules and guidelines that you need to know.
 
-### File structure, organisation rules, and boilerplate
+### Folder structure
 
 Questions are placed in modules in the `funcfinder.questions` package. The modules can have any name (other than `__init__`, don't touch those) and can be organised further into nested packages as desired. The aim of this is simply to avoid a single monolithic file of questions. The names of modules have no real semantics, just try to pick a sensible module for each question. The structure of the package `funcfinder.answers` must match `funcfinder.questions` exactly.
 
-Every question must have at least one answer - if you think leaving unsolved questions should be allowed, share your thoughts [here](https://github.com/alexmojaki/funcfinder/issues/1). A solution to a question must be in the module corresponding to the question, i.e. an answer under `funcfinder.answers.x.y.z` must solve a question in `funcfinder.questions.x.y.z`.
+### Naming
+
+All questions must be uniquely named, and all answers must be uniquely named, even across packages. A question and an answer can have the same name. `funcfinder show` can be used to easily check if a question name is taken. If there is a naming conflict it should throw an error at runtime, unless the name was defined twice in the same file.
+
+### Imports
 
 All modules must contain the following imports:
 ```
@@ -304,18 +309,22 @@ from funcfinder.utils import *
 An answers module must also import the corresponding questions module with the alias `q`, i.e.
 ```import funcfinder.questions.x.y.z as q```
 
-Imports from the standard library should appear at the top as `import module_name`. The forms `import x as y` and `from x import y` are forbidden. Other libraries should be imported using the `try_import` function already imported from `funcfinder.utils`, e.g.
+Imports from the standard library should appear at the top as `import module_name`. The forms `import x as y` and `from x import y` are forbidden.
+
+Imports from within `funcfinder` itself must also be fully qualified, with no alias. You can create an alias inside the answer using assignment, e.g.
+```useful_function = funcfinder.answers.module.useful_function```
+
+Other libraries should be imported using the `try_import` function already imported from `funcfinder.utils`, e.g.
 
 ```sortedcontainers = try_import("sortedcontainers")```
 
 The names on the left and right must match. Using this will prevent errors for users who don't have the library installed, but the `ImportError` will still be raised (wrapped in a `TryImportError`) if you try to use the module. This is how the answer `sorted_dict` raised a `TryImportError` in the tests in the example above even though there was no visible import. It also means that IDEs and other tools won't complain about modules that can't be found.
 
-All questions must be uniquely named, and all answers must be uniquely named, even across packages. A question and an answer can have the same name. `funcfinder show` can be used to easily check if a question name is taken. If there is a naming conflict it should throw an error at runtime, unless the name was defined twice in the same file.
-
 ### Writing questions
 
 Questions should:
 
+* Have at least one answer. If you think leaving unsolved questions should be allowed, share your thoughts [here](https://github.com/alexmojaki/funcfinder/issues/1).
 * Include a docstring explaining exactly what the answer function must accomplish. Be as clear as possible and include plenty of detail. Insert synonyms for words so that the question is more likely to be found. Remember that searching for questions is [(for now)](https://github.com/alexmojaki/funcfinder/issues/2) more like using `grep` than Google.
 * Use the `assert*` functions from `funcfinder.utils` instead of raw `assert` statements.
 * Use `assertEqualIters` and `assertDeepEqualIters` where the flexibility is needed.
@@ -324,9 +333,10 @@ Questions should:
 * Have a single parameter named `func`.
 * Always call `func` with the same number of arguments, and not use keyword arguments.
 * Call to a common 'base' question where appropriate instead of repeating tests.
-* Have at least one solution.
 
 ### Writing answers
+
+A solution to a question must be in the module corresponding to the question, i.e. an answer under `funcfinder.answers.x.y.z` must solve a question in `funcfinder.questions.x.y.z`. The exception is if an answer solves questions in multiple modules, but this probably indicates poor question placement.
 
 All answers must have the `solves` decorator (which has been imported from `funcfinder.utils`), with the solved questions as arguments. For example:
 
