@@ -200,7 +200,7 @@ def ask(question, time_answers=True):
     dependencies = set()
     sources = set()
     for answer in funcfinder.answers.functions.itervalues():
-        if answer.func_code.co_argcount == num_args:
+        if not getattr(answer, "ask_ignore", False) and answer.func_code.co_argcount == num_args:
             for index_permutation in index_permutations:
                 try:
                     permuted_answer = _permute_args(index_permutation)(answer)

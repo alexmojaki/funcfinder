@@ -2,42 +2,31 @@
 
 [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/alexmojaki/funcfinder?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-funcfinder is a repo to automatically solve problems of the form "I need a Python function that does X." It's like an automated Stack Overflow for specific kinds of questions, with several advantages. Questions are in the form of unit tests that the answers must satisfy, so that you can always be sure of their correctness. Multiple answers to questions are automatically timed for comparison. You can search for questions using keywords the traditional way, or you can ask your own question using code, in the form of a sort of test. For example, if you run the following script:
+funcfinder is a new way to solve problems of the form "I need a Python function that does X". This is commonly solved using search engines and forums where the results exist in the form of mere text. Some of it may represent code, but it can't be executed. funcfinder is a repository of 'questions', which are parametrised unit tests, and 'answers', which are functions that satisfy the tests. By using actual code, new possibilities open up:
 
-```
-import funcfinder
-
-def how_to_test_if_number_is_even(func):
-    assert func(2)
-    assert not func(3)
-    assert func(4)
-
-funcfinder.ask(how_to_test_if_number_is_even)
-```
-
-the output is (roughly):
-
-```
-/Users/alexhall/Dropbox/python/funcfinder/funcfinder/answers/math.py : 11
-def is_even(a):
-    return is_divisible_by(a, 2)
-
-Solves the question is_even
-
--------------------------
-
-Dependencies:
-
-/Users/alexhall/Dropbox/python/funcfinder/funcfinder/answers/math.py : 6
-def is_divisible_by(a, b):
-    return a % b == 0
-```
-
-That is, you describe what the function should do, and it will find one that does that.
+* Answers to questions are essentially guaranteed to be correct because they are unit tested.
+* Questions can have multiple answers, meaning the same unit test is applied to different functions, which has several implications:
+    * Unit testing code is effectively reused.
+    * Every answer is timed automatically to show performance differences.
+    * You can 'try out' multiple answers simultaneously by passing sample input to them all and seeing how the results subtly differ.
+    * You can easily switch between answers with reduced risk of breaking your code, e.g. if:
+        * It turns out an answer has a bug.
+        * Someones creates a new answer which is more efficient.
+        * You find you have more specific requirements, e.g. you need a function that handles any iterable, not just lists.
+* New questions can be asked using only code by giving a simple test with a sample of what the function should do. For example, `assert func(["a", "bb", "c"], len) == {1: ["a", "c"], 2: ["bb"]}` describes a function which groups elements of an iterable into a dictionary based on some key function. This little test is run against the entire repository of functions to find an answer automatically.
+* Questions can depend on other questions through simple function calls (more code reuse!) which are detected automatically. Since this is expressed in code, various complex relationships are possible, but the most common case is an inheritance hierarchy of requirements for answers to satisfy. This lets you easily navigate from functions with loose requirements to functions with more specific ones.
+* Answers can also use each other and again this can be detected automatically. The result is that:
+    * Answers to complex questions are easier to write because a whole repository of generically useful functions is available.
+    * Answers are cleanly divided into small functions with different levels of abstraction, resulting in more readable code.
+    * In the process of finding a function to solve one specific problem you can find more generic functions which you are likely to use elsewhere.
+* By not relying on natural language descriptions:
+    * There is no doubt or ambiguity in what is being asked for, or what the answer accomplishes.
+    * There is no need to know a particular language (e.g. English) to ask a question, answer it, or to understand both the question and answer.
+    
+This repository is a basic implementation of this idea providing the most essential features. It's an experiment to see if people are interested and willing to contribute questions and answers. If so, it may be turned into a complete website, which could ultimately mean answers appearing directly in Google searches. Imagine having all of the above, with no installation effort, a fancy frontend, maybe even integration with Stack Overflow. Imagine having implementations for other languages. If this excites you, read on.
 
 ## Table of Contents
 
-* [Motivation](#motivation)
 * [Getting started](#getting-started)
 * [Usage](#usage)
   * [Searching](#searching)
@@ -52,28 +41,8 @@ That is, you describe what the function should do, and it will find one that doe
   * [Imports](#imports)
   * [Writing questions](#writing-questions)
   * [Writing answers](#writing-answers)
+    * [Answers ignored when asking](#answers-ignored-when-asking)
 * [FAQ](#faq)
-
-## Motivation
-
-Let's look at the kind of situation where this repo can be useful:
-
-* You have a problem that can be solved by a single Python function.
-* Your problem seems common enough such that someone else might have already written this function and shared it with the world.
-* At least one of the following is true:
-    * You don't know how you would write the function yourself.
-    * You're not sure that your implementation would be correct.
-    * You don't want to spend the time and/or energy writing the function.
-    * Someone else's solution is likely to be more elegant and/or efficient.
-    * You're interested in seeing other solutions to improve your Python or general coding knowledge.
-
-Google and Stack Overflow are great for this kind of situation, and you should continue using them, but funcfinder adds an extra level of quality by helping you to be sure that the solution is correct and fast.
-
-Moreover there are times when searching online just doesn't work. Your internet connection may not be working. Maybe it's hard to describe the problem in a few keywords, and none of the results are what you're looking for. At this point you might consider asking your own question on Stack Overflow. But I believe that first 'asking' on funcfinder, i.e. writing a small test for your desired function, is almost always better:
-* It may be less effort, as you don't have to write out a clear description of your problem for other people to understand.
-* No one else has to take the time to read and maybe answer your question.
-* If an answer is available, you will get it much faster.
-* If you don't find an answer, you now have unit tests which you can use to make your question clear to others and to verify the correctness of any answers. [Some coding practices](https://en.wikipedia.org/wiki/Test-driven_development) even say you should *always* have tests first. This is a pretty great worst-case scenario.
 
 ## Getting started
 
@@ -87,7 +56,7 @@ within the main directory. This will install the library so that you can use it 
 
 ### Searching
 
-When you want to find a function, you probably don't want to start by writing tests. A simple keyword search will probably do. The `funcfinder` shell command is made for this. By itself, or with the flag `-h`, it will give you some help on usage in case you get lost. To search for a function, you must use the `find` subcommand. This takes any number of positional arguments representing search terms. The results are questions (answers come later) whose docstrings contain all the search terms directly, ignoring case. You can use quotes to force terms to appear together.
+Finding a function typically begins with a simple keyword search. The `funcfinder` shell command is made for this. By itself, or with the flag `-h`, it will give you some help on usage in case you get lost. To search for a function, use the `find` subcommand. This takes any number of positional arguments representing search terms. The results are questions (answers come later) whose docstrings contain all the search terms directly, ignoring case. You can use quotes to force terms to appear together.
 
 For example, let's say we want a dictionary where the keys are in sorted order. This might go like this:
 
@@ -121,7 +90,7 @@ Here we see the names and docstrings of all the questions that satisfied the sea
 
 ### Showing questions
 
-Suppose that `sort_dict_by_key` sounds most like what we want. We can take a closer look using the `show` subcommand:
+Suppose that `sort_dict_by_key` sounds most like what we want. We can take a closer look using the `show` subcommand. An example is below. This looks like a lot to absorb, but most of it is source code for the various pieces involved, along with where to find it. This is great for when you actually use the tool, but understanding it all is not required for this tutorial. We'll walk through it.
 
 ```
 $ funcfinder show sort_dict_by_key
@@ -199,11 +168,9 @@ def copy_dict(func):
     assertIsNone(original.get('x'))
 ```
 
-This looks like a lot to absorb, but most of it is source code for the various pieces involved, along with where to find it. This is great for when you actually use the tool, but understanding it all is not required for this tutorial. Let's walk through it.
-
 #### The question
 
-The first thing in the output is the source code of the question. A question is a function which takes a single argument, also a function, traditionally named `func`. `func` is a potential answer to the question: the question will call it with whatever arguments it wants and make assertions about the results. `func` is considered a correct solution if the whole question can execute without any errors. So a question is just a unit test that tests a single function. By reading it you can be confident about what the answer(s) will provide, as the tests will be run for you.
+The first thing in the output is the source code of the question. A question is a function which takes a single argument, also a function, traditionally named `func`. `func` is a potential answer to the question: the question will call it with whatever arguments it wants and make assertions about the results. `func` is considered a correct solution if the whole question can execute without any errors. So a question is just a unit test that tests a single function. By reading it you can be confident about what the answer(s) will provide.
 
 #### Answers
 
@@ -246,30 +213,52 @@ The last part of the output shows dependencies, which are other questions or ans
 
 In this case the `sort_dict_by_key` question directly tests properties related to order, but it also has the requirement that the dictionary it returns is a new, separate copy of the original. This requirement is expressed in the first line with the statement `copy_dict(func)`. This does not mean that a dictionary `func` is being copied, but that the answer `func` must also solve the question `copy_dict`. `copy_dict` itself is not a difficult question - the method `dict.copy()` can solve that - but it is a common requirement for other questions. `sort_dict_by_value` is an example of another question that reuses `copy_dict`.
 
-The function call `copy_dict(func)` is all that is needed from the question author. funcfinder picks it up automatically and prints the source of `copy_dict` at the end so that users can immediately see the additional requirements imposed by the `sort_dict_by_key` question. The same goes for answers. For example, the `is_even` answer shown at the beginning made use of the `is_divisible_by` answer, so that was printed out as well.
+The function call `copy_dict(func)` is all that is needed from the question author. funcfinder picks it up automatically and prints the source of `copy_dict` at the end so that users can immediately see the additional requirements imposed by the `sort_dict_by_key` question. The same goes for answers. For example, the `is_even` answer shown in the next section uses the `is_divisible_by` answer, so that is printed out as well.
 
 ### Asking questions
 
-If you can't find an existing question then it's time to resort to asking your own. If the thought of writing tests makes your stomach churn, don't worry! Let's revisit the first example:
+If you can't find a question by searching normally then it's time to write a question in code. Here's a simple example:
 
 ```
 import funcfinder
 
-def how_to_test_if_number_is_even(func):
+def how_to_check_if_number_is_even(func):
     assert func(2)
     assert not func(3)
     assert func(4)
 
-funcfinder.ask(how_to_test_if_number_is_even)
+funcfinder.ask(how_to_check_if_number_is_even)
 ```
 
-Note that this is NOT a real test. If the tests you write for production code look like that then you can expect your systems to break all the time. But when you want to ask funcfinder a new question you don't need to be thorough at all - just give enough detail to narrow things down. Most answers in the repository won't even expect an integer as input and will fail immediately. A few unwanted answers could potentially survive this test (e.g. check if the number is a power of two), but it's very easy to either take a quick look and see which answer you actually need, or to add a couple more test cases to narrow things down (e.g. `assert func(6)`).
+If you're still confused about what a question is, read [here](#the-question). The output of running this script is (roughly):
+
+```
+/Users/alexhall/Dropbox/python/funcfinder/funcfinder/answers/math.py : 11
+def is_even(a):
+    return is_divisible_by(a, 2)
+
+Solves the question is_even
+
+-------------------------
+
+Dependencies:
+
+/Users/alexhall/Dropbox/python/funcfinder/funcfinder/answers/math.py : 6
+def is_divisible_by(a, b):
+    return a % b == 0
+```
+
+Note that the question does not need to thoroughly test the function. Just give enough detail to narrow things down. Most answers in the repository won't even expect an integer as input and will fail immediately. A few unwanted answers could potentially survive this test (e.g. check if the number is a power of two), but it's very easy to either take a quick look and see which answer you actually need, or to add a couple more test cases to narrow things down (e.g. `assert func(6)`).
 
 If answers are found they will come with names of questions that they solve, which you can inspect with `funcfinder show` to see more detailed tests.
 
-There are just a few simple guidelines to asking questions. Your expected answer must have a simple function signature: no `*args` or `**kwargs`, and no tuple unpacking (i.e. no `def foo(a, (b, c)): ...`). Therefore every call to `func` in the question must have the same number of arguments, none of them named. You're looking for a solution to a specific problem, not a neat API.
+There are just a few simple guidelines to asking questions:
 
-Keep in mind that your question is going to run a large number of times, and you probably want this process to finish quickly. Keep the inputs small: small numbers, short lists, etc. Definitely don't pass any infinite iterators. Call the given function as soon as possible so that it can fail quickly for wrong answers. This means that if your question involves something even slightly slow such as setting up a database connection or opening a file, do it once outside the question definition. What if you want a function that inserts a row into a database table? Unfortunately answers like that are prohibited, because they make other questions impractical. If you wanted to ask for a function that just queried a table, you wouldn't want to recreate the table from scratch every time just to make sure that irrelevant answers which modified your table didn't ruin your test. Therefore answers which mutate resources that are expensive to set up are forbidden, and asking for such functions will probably fail.
+Every call to `func` in the question must have the same number of arguments, none of them named. You're looking for a solution to a specific problem, not a neat API.
+
+Keep in mind that your question is going to run a large number of times. Keep the inputs small: small numbers, short lists, etc. Definitely don't pass any infinite iterators. Call the given function as soon as possible so that it can fail quickly for wrong answers. If your question involves something even slightly slow such as setting up a database connection or opening a file, try to do it once outside the question definition. This is safe as answers are not allowed to modify these resources (see below), but you should still reset iterators and database cursors and seek to the beginning of files at the start of the question.
+
+Some answers will be marked to say that they should be ignored by `funcfinder.ask`; read more [here](#answers-ignored-when-asking) so that you don't waste your time.
 
 If the output of your function should be some kind of iterable (e.g. a list or a tuple) and you're not 100% sure what the type will be, consider the functions `assertEqualIters` and `assertDeepEqualIters` from the `funcfinder.utils` module.
 
@@ -282,10 +271,10 @@ It will take a large community effort to make this repo useful. So the first thi
 If you have concerns or suggestions, feel free to open an issue, join the discussion on an existing one, or [come chat on gitter](https://gitter.im/alexmojaki/funcfinder?utm_source=share-link&utm_medium=link&utm_campaign=share-link). All feedback is welcome.
  
 If you're willing to write some questions and answers, excellent! You can contribute any functions that you think someone else is likely to look for. This might be the case if you:
+
 * Tried to find it here yourself and couldn't.
 * Saw someone else looking for such a function online.
 * Have functions in your own code that are generic enough that someone else might want to solve the same problem, especially if *you* are likely to use them again in a different project.
-* Want to advertise an open source library.
 
 Be aware that any code contributions fall under the MIT License and anyone else can use the code however they please.
 
@@ -302,10 +291,12 @@ All questions must be uniquely named, and all answers must be uniquely named, ev
 ### Imports
 
 All modules must contain the following imports:
+
 ```
 from __future__ import absolute_import
 from funcfinder.utils import *
 ```
+
 An answers module must also import the corresponding questions module with the alias `q`, i.e.
 ```import funcfinder.questions.x.y.z as q```
 
@@ -350,11 +341,11 @@ An answer doesn't *have* to be marked as solving a question even if it does. For
 
 Answers should also:
 
-* Not mutate or modify anything that takes time to set up in a clean state. This typically means external resources such as files or databases.
+* Use `@ask_ignore` when appropriate; [see below](#answers-ignored-when-asking).
 * Have a plain signature: no `*args`, `**kwargs`, `arg=default`, or tuple unpacking.
 * Use other answers where appropriate.
 * Not use libraries whose source isn't easily available and which are neither somewhat popular (e.g. at least 20 stars on GitHub) nor very small. In other words, it should be easy to verify that the library is trustworthy. Good documentation is also important in this regard.
-* Finish quickly, whether they succeed or fail, when given small inputs. For example, don't compute the [Ackermann function](https://en.wikipedia.org/wiki/Ackermann_function). Make sure an answer never enters an infinite loop unless the input is an infinite iterator. In other words you're not expected to manually count the iterations of a loop and break when the count is too high, but you should handle unexpected finite input. For example, the following is unacceptable because it will never terminate if `b` is `-1` or `0.5`:
+* Never enter an infinite loop unless the input is an infinite iterator. Don't count the iterations of a loop and break when the count is too high, but handle unexpected finite input. For example, the following is unacceptable because it will never terminate if `b` is `-1` or `0.5`:
   
 ```
 def pow(a, b):
@@ -368,6 +359,12 @@ def pow(a, b):
 
 Once you've finished answering a question, run the `funcfinder show` command to make sure it works. If you see that the question has multiple solutions, and one might be significantly faster than another, consider ensuring that the question is able to demonstrate the performance difference. This means adding one or more test cases at the end of the question that have a medium sized input, if none are present. If you do this, remember to run `funcfinder show` again at the end. Don't change the question if one of the answers requires a library that you don't have and aren't willing to install - you don't want to unknowingly break an answer. By the way, the `-t` flag will prevent `funcfinder` from timing answers, just in case that starts to annoy you.
 
+#### Answers ignored when asking
+
+There are some kinds of answers that are worth having in the repository for people to find by searching but create problems for users of `funcfinder.ask`. You should use the decorator `@ask_ignore` when you write such a problematic answer. `funcfinder.ask` will then skip over the answer when looking for a solution to a question.
+
+There are two common cases to use this decorator. The first is if the function is likely to cause a test to take a significant amount of time, even when given 'small' inputs of a common type. Examples include the [Ackermann function](https://en.wikipedia.org/wiki/Ackermann_function) or functions which connect to the Internet. The second case is answers which mutate or modify external resources such as files or databases, or anything else that takes time to set up in a clean state. This includes calling `.close()` or a similar method on anything. This way users can set up these resources for testing outside of a question, speeding up the asking process, and not worry about answers interfering with each other in the test.
+
 ## FAQ
 
 **What if I ask a question and my test always throws an exception because I made a mistake?**
@@ -375,6 +372,3 @@ If the exception is thrown before any calls to `func` are made, it'll be picked 
 
 **What if I ask a question looking for a function with multiple arguments?**
 No problem. funcfinder will automatically try out every possible rearrangement behind the scenes. It will even rearrange the arguments in the source code it prints for you to match your question. In short, this is not an issue.
-
-**Why is this as a git repository and not a website? Is this scalable?**
-This is a simple way to deploy an experiment. If people show interest then maybe one day this will be something more.

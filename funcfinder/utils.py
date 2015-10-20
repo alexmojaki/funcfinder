@@ -16,6 +16,11 @@ def solves(*questions):
     return real_decorator
 
 
+def ask_ignore(answer):
+    answer.ask_ignore = True
+    return answer
+
+
 def try_import(module_name):
     try:
         return importlib.import_module(module_name)
