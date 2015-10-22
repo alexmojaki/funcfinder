@@ -38,3 +38,13 @@ def flatten_2d_list_using_list_comprehension(lists):
 @solves(q.flatten_2d_list_to_iterable, q.flatten_2d_list_to_list)
 def flatten_2d_list_to_list_using_chain(lists):
     return list(flatten_2d_list_to_iterable_using_chain(lists))
+
+
+@solves(q.contains_all)
+def contains_all_using_imap(container, contained):
+    return all(itertools.imap(container.__contains__, contained))
+
+
+@solves(q.contains_all)
+def contains_all_using_generator(container, contained):
+    return all(x in container for x in contained)

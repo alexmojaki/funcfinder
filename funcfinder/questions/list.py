@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 from funcfinder.utils import *
+import string
+import random
 
 
 def transpose(func):
@@ -83,3 +85,40 @@ def flatten_2d_list_to_list(func):
     """
     flatten_2d_list_to_iterable(func)
     assertEqual(func([[1, 2], [3, 4]]), [1, 2, 3, 4])
+
+
+def contains_all(func):
+    """
+    Return whether the first argument (string, list, tuple, set, or anything else with a __contains__ method)
+    contains all the elements in the second (any iterable).
+    """
+    assertTrue(func([1, 2], [1]))
+    assertTrue(func([1, 2], [2, 1]))
+    assertFalse(func([1, 2], [3]))
+    assertFalse(func([1, 2], [2, 3]))
+    assertTrue(func([1, 2, 3], [2, 3]))
+
+    assertTrue(func("the quick brown fox jumps over the lazy dog", string.ascii_lowercase))
+    assertFalse(func("the quick brown fox jumps over the dog", string.ascii_lowercase))
+
+    assertTrue(func({1, 2, 3}, (1, 3)))
+    assertFalse(func((1, 3), {2, 3}))
+
+    source = range(200)
+    random.shuffle(source)
+    container = []
+    contained = []
+    while source:
+        contained.append(source.pop())
+        assertFalse(func(container, contained))
+        container.append(contained[-1])
+        assertTrue(func(container, contained))
+        container.append(source.pop())
+        assertTrue(func(container, contained))
+
+    container = list(string.digits + string.letters + string.punctuation)
+    random.shuffle(container)
+    container = ''.join(container)
+    for length in xrange(5, 10):
+        assertTrue(func(container,
+                        (container[i:i+length] for i in xrange(0, len(container) - length, length + 2))))
